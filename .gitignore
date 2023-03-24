@@ -30,3 +30,7 @@
 *.exe
 *.out
 *.app
+
+# Executable created by Makefile
+ffixed2free
+

@@ -1,3 +1,9 @@
+! Copyright (c) 2023 MeteoSwiss, contributors listed in AUTHORS
+! 
+! Distributed under the terms of the BSD 3-Clause License.
+!  
+! SPDX-License-Identifier: BSD-3-Clause
+
 program ffixed2free
 
 use m_ffixed2free,           ONLY: ffixed2free_file

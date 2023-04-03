@@ -20,7 +20,7 @@ pipeline {
         stage('Test') { 
             steps {
                 sh '''
-		./ffixed2free
+		./src/ffixed2free
 		'''
             }
         }

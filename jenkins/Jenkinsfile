@@ -1,0 +1,28 @@
+pipeline {
+    agent {
+        label 'tsa'
+    }
+    post {
+        always{
+            echo 'Cleaning up workspace'
+            deleteDir()
+        }
+    }
+    stages {
+        stage('Build') { 
+            steps {
+	    	sh '''#!/bin/bash
+     	    	cd src
+	    	make
+                ''' 
+            }
+        }
+        stage('Test') { 
+            steps {
+                sh '''
+		./src/ffixed2free
+		'''
+            }
+        }
+    }
+}

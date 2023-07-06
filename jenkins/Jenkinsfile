@@ -1,0 +1,29 @@
+pipeline {
+    agent {
+        label 'tsa'
+    }
+    post {
+        always{
+            echo 'Cleaning up workspace'
+            deleteDir()
+        }
+    }
+    stages {
+        stage('Build') { 
+            steps {
+	    	sh '''#!/bin/bash
+     	    	cd src
+	    	make
+                ''' 
+            }
+        }
+        stage('Test') { 
+            steps {
+                sh '''
+		./src/ffixed2free ./example/fortran_example.f
+                diff ./example/fortran_example.f90 ./example/converted/fortran_example.f90
+		'''
+            }
+        }
+    }
+}

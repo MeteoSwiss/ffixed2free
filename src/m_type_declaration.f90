@@ -295,11 +295,12 @@ CONTAINS
        ELSE
           oline(epos+1:epos+5) = '(len='
        END IF
-       CALL stringpattern(TRIM(iline_up), pattern_number, spos_n, epos_n)
-       if (spos_n == 0) then
-          CALL stringpattern(TRIM(iline_up), pattern_star, spos_n, epos_n)
+       CALL stringpattern(TRIM(iline_up), pattern_star, spos_n, epos_n)
+       if (spos_n > 0) then
           spos_n = spos_n+1
           epos_n = epos_n-1
+       else
+          CALL stringpattern(TRIM(iline_up), pattern_number, spos_n, epos_n)
        end if
        oline(epos+6:epos+6+epos_n-spos_n) = iline(spos_n:epos_n)
        oline(epos+6+epos_n-spos_n+1:epos+6+epos_n-spos_n+5) = ') :: '

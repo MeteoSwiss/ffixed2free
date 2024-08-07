@@ -260,89 +260,124 @@ CONTAINS
   
   SUBROUTINE check_end_do
 
-    ! Check and modify end of DO-loop.
+   ! Check and modify end of DO-loop.
 
-    ! Local variables:
-    CHARACTER (LEN=5) :: label_st
-    INTEGER :: spos_label2, epos_label2
-    LOGICAL :: luppercase
+   ! Local variables:
+   CHARACTER (LEN=5) :: label_st
+   INTEGER :: spos_label2, epos_label2
+   LOGICAL :: luppercase, lused_label
 
-    ! Check for label:
-    CALL stringpattern &
-         (TRIM(iline_up), end_do_label_pattern, spos_label, epos_label)
+   ! Check for label:
+   CALL stringpattern &
+        (TRIM(iline_up), end_do_label_pattern, spos_label, epos_label)
 
-    ! Exit subroutine if pattern not found:
-    IF (spos_label == 0) RETURN
+   ! Exit subroutine if pattern not found:
+   IF (spos_label == 0) RETURN
 
-    ! Label as integer:
-    READ(iline(spos_label:epos_label-1),*) label
+   ! Label as integer:
+   READ(iline(spos_label:epos_label-1),*) label
 
-    ! Get item at tail of linked list:
-    CALL get_at_tail(item)
-    
-    ! Exit if label does not fit:
-    IF (ASSOCIATED(item)) THEN
-       IF (item%label /= label) RETURN
-    ELSE
-       RETURN
-    END IF
+   ! Get item at tail of linked list:
+   CALL get_at_tail(item)
+   
+   ! Exit if label does not fit:
+   IF (ASSOCIATED(item)) THEN
+      IF (item%label /= label) RETURN
+   ELSE
+      RETURN
+   END IF
+   
 
-    ! Check if it is a labeled CONTINUE, a labeled END DO or simply a labeled
-    ! command line. In the latter case, re-write line without the label, 
-    ! in the former two cases, do not write any output: 
-    CALL stringpattern &
-         (TRIM(iline_up), end_do_continue_pattern, spos_cont, epos_cont)
+   ! Check if there is a GOTO pointing to the current label
+   lused_label = ANY(label == goto_labels)
 
-    IF (spos_cont == 0) THEN    ! No CONTINUE found
 
-       ! Check if it is a labeled END DO:
-       CALL stringpattern (TRIM(iline_up), labeled_enddo_pattern, spos, epos)
+   ! Check if it is a labeled END Do
+   CALL stringpattern (TRIM(iline_up), labeled_enddo_pattern, spos, epos)
+   IF (spos > 0) THEN ! END DO FOUND
+       ! If the label is use then we add a labeled continue
+       IF (lused_label) THEN
+           lenlabel = epos_label - spos_label   ! number of digits of the label
 
-       IF (spos == 0) THEN ! No CONTINUE or END DO found -> labeled command line
+           spos_cont = item%spos + indentdo
+           luppercase = item%luppercase
 
-          CALL stringpattern &
+           ! Insert labeled CONTINUE:
+           WRITE(label_st, '(i5)') label
+           spos_cont = MAX(spos_cont, lenlabel + 2)
+
+           oline = ' '
+           oline(:lenlabel) = label_st(5-lenlabel+1:5)
+           IF (luppercase) THEN
+               oline(spos_cont:spos_cont+7) = 'CONTINUE'
+           ELSE
+               oline(spos_cont:spos_cont+7) = 'continue'
+           END IF
+           CALL write_output
+       END IF
+   END IF
+
+   ! Check if it is a labeled CONTINUE or simply a labeled
+   ! command line. In the latter case, re-write line without the label if unused
+   ! if labeled continue is unused do not re-write
+   CALL stringpattern &
+        (TRIM(iline_up), end_do_continue_pattern, spos_cont, epos_cont)
+
+   
+   IF (spos_cont == 0) THEN    ! No CONTINUE found
+
+       IF (lused_label) THEN ! IF the label is used re-write the line as it is. MIGHT HAVE INDENT ISSUE
+           oline = iline
+           CALL write_output 
+
+           ! Check for trailing ampersand (-> line continuation):
+           CALL stringpattern (TRIM(iline_up), ampersand_pattern, spos, epos)
+           IF (spos > 0) lline_cont = .TRUE.
+
+       ELSE
+           CALL stringpattern &
                (TRIM(iline_up), end_do_label_pattern2, spos_label2, epos_label2)
 
-          ! Replace label with blanks and write output:
-          oline(:item%spos+indentdo-1) = ' '
-          oline(item%spos+indentdo:) = TRIM(iline(epos_label2+1:))
-          CALL write_output
-          
-          ! Check for trailing ampersand (-> line continuation):
-          CALL stringpattern (TRIM(iline_up), ampersand_pattern, spos, epos)
-          IF (spos > 0) lline_cont = .TRUE.
-
+           ! Replace label with blanks and write output:
+           oline(:item%spos+indentdo-1) = ' '
+           oline(item%spos+indentdo:) = TRIM(iline(epos_label2+1:))
+           CALL write_output
+           
+           ! Check for trailing ampersand (-> line continuation):
+           CALL stringpattern (TRIM(iline_up), ampersand_pattern, spos, epos)
+           IF (spos > 0) lline_cont = .TRUE.
        END IF
 
-    END IF
+   ELSE 
+       ! labeled CONTINUE
+       ! IF used then rewrite it
+       IF (lused_label)THEN
+         lenlabel = epos_label - spos_label   ! number of digits of the label
 
-    ! Check if there is a GOTO pointing to the current label and insert a
-    ! labeled CONTINUE if it is the case:
-    IF (ANY(label == goto_labels)) THEN
-       lenlabel = epos_label - spos_label   ! number of digits of the label
+         spos_cont = item%spos + indentdo
+         luppercase = item%luppercase
 
-       spos_cont = item%spos + indentdo
-       luppercase = item%luppercase
+         ! Insert labeled CONTINUE:
+         WRITE(label_st, '(i5)') label
+         spos_cont = MAX(spos_cont, lenlabel + 2)
 
-       ! Insert labeled CONTINUE:
-       WRITE(label_st, '(i5)') label
-       spos_cont = MAX(spos_cont, lenlabel + 2)
-
-       oline = ' '
-       oline(:lenlabel) = label_st(5-lenlabel+1:5)
-       IF (luppercase) THEN
-          oline(spos_cont:spos_cont+7) = 'CONTINUE'
-       ELSE
-          oline(spos_cont:spos_cont+7) = 'continue'
+         oline = ' '
+         oline(:lenlabel) = label_st(5-lenlabel+1:5)
+         IF (luppercase) THEN
+             oline(spos_cont:spos_cont+7) = 'CONTINUE'
+         ELSE
+             oline(spos_cont:spos_cont+7) = 'continue'
+         END IF
+         CALL write_output
        END IF
-       CALL write_output
-    END IF
 
-    lpattern_found = .TRUE.
-    lwrite_end_do = .TRUE.
+   END IF
 
-  END SUBROUTINE check_end_do
+  
+   lpattern_found = .TRUE.
+   lwrite_end_do = .TRUE.
 
+ END SUBROUTINE check_end_do
 
   SUBROUTINE write_end_do
 

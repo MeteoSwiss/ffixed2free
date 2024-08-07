@@ -21,7 +21,7 @@ pipeline {
             steps {
                 sh '''
 		./src/ffixed2free ./example/fortran_example.f
-                diff ./example/fortran_example.f90 ./example/converted/fortran_example.f90
+                diff ./example/fortran_example.f90 ./example/reference/fortran_example.f90
 		'''
             }
         }

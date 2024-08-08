@@ -31,6 +31,9 @@
 *.out
 *.app
 
+# Visual Studio Code
+.vscode
+
 # Executable created by Makefile
 ffixed2free
 
